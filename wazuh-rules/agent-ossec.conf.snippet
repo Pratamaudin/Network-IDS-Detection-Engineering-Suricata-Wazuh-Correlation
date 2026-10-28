@@ -1,0 +1,19 @@
+<!--
+  Snippet untuk /var/ossec/etc/ossec.conf di VM sensor (Wazuh agent).
+  Tujuan: forward eve.json Suricata ke Wazuh manager.
+  Tambahkan blok <localfile> ini di dalam <ossec_config>.
+
+  Wazuh punya decoder Suricata bawaan, jadi field eve.json (alert.signature,
+  src_ip, dest_ip, dsb.) langsung ter-parse tanpa decoder tambahan.
+
+  Izin file: agent berjalan sebagai user "wazuh". eve.json dimiliki
+  suricata:suricata, jadi beri akses baca:
+    sudo usermod -a -G suricata wazuh
+    sudo chmod 750 /var/log/suricata
+  lalu restart agent.
+-->
+
+<localfile>
+  <log_format>json</log_format>
+  <location>/var/log/suricata/eve.json</location>
+</localfile>

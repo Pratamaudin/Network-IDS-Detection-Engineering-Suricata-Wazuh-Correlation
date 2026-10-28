@@ -1,0 +1,24 @@
+# ---------------------------------------------------------------------------
+# Potongan konfigurasi penting dari /etc/suricata/suricata.yaml di sensor.
+# Ini BUKAN file lengkap — hanya baris yang diubah dari default.
+# ---------------------------------------------------------------------------
+
+# 1) HOME_NET diarahkan ke subnet lab saja (lebih spesifik = alert lebih akurat)
+vars:
+  address-groups:
+    HOME_NET: "[192.168.56.0/24]"
+    EXTERNAL_NET: "!$HOME_NET"
+
+# 2) af-packet memantau interface host-only (yang melihat trafik Kali<->DC01
+#    lewat promiscuous mode "Allow All" di adapter host-only VirtualBox)
+af-packet:
+  - interface: enp0s8
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+
+# 3) Daftarkan custom rule file
+#    default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - suricata.rules
+  - local.rules

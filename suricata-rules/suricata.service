@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# /lib/systemd/system/suricata.service
+#
+# Versi yang BERHASIL meng-capture paket di VirtualBox host-only + promiscuous.
+#
+# ROOT CAUSE yang diperbaiki:
+#   Service bawaan menjalankan Suricata dengan --af-packet, user "suricata",
+#   dan sandboxing (ProtectSystem=full, ProtectHome=true). Kombinasi ini
+#   membuat service "active" tetapi 0 alert (tidak benar-benar meng-capture),
+#   sementara menjalankan Suricata manual sebagai root bisa.
+#
+# PERUBAHAN:
+#   - ExecStart pakai "-i enp0s8" (bukan --af-packet), berjalan sebagai root
+#     (buang --user/--group suricata)
+#   - ProtectSystem=no, ProtectHome=no, PrivateDevices=no  (matikan sandbox
+#     yang memblokir capture / baca config)
+#
+# Sesuaikan "enp0s8" dengan interface host-only sensor Anda.
+# ---------------------------------------------------------------------------
+
+[Unit]
+Description=Suricata IDS/IPS/NSM/FW daemon
+After=network.target network-online.target
+Requires=network-online.target
+Documentation=man:suricata(8) man:suricatasc(8)
+Documentation=https://suricata.io/documentation/
+
+[Service]
+ProtectSystem=no
+ProtectHome=no
+PrivateDevices=no
+PIDFile=/run/suricata.pid
+ExecStartPre=/bin/rm -f /run/suricata.pid
+ExecStart=/usr/bin/suricata -i enp0s8 -c /etc/suricata/suricata.yaml --pidfile /run/suricata.pid
+ExecReload=/bin/kill -USR2 $MAINPID
+ExecStop=/usr/bin/suricatasc -c shutdown
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

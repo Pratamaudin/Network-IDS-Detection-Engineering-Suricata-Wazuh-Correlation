@@ -1,0 +1,18 @@
+# ---------------------------------------------------------------------------
+# Custom Suricata rule - deteksi port scan terhadap aset lab
+# Lokasi di sensor: /var/lib/suricata/rules/local.rules
+# (didaftarkan di rule-files: pada /etc/suricata/suricata.yaml)
+#
+# Konteks: ET Open ruleset bawaan TIDAK menghasilkan alert SCAN terhadap
+# nmap -sS / -sV ke DC01 (detection gap). Rule ini menutup gap itu.
+#
+# Catatan desain:
+#   - proto "ip ... -> HOME_NET" dipakai karena attacker (Kali 192.168.56.40)
+#     berada DI DALAM subnet lab 192.168.56.0/24, sehingga ia bukan EXTERNAL_NET.
+#   - threshold:type threshold (BUKAN detection_filter): nmap mengirim 1 SYN
+#     per port ke port berbeda = 1 flow per port, jadi detection_filter yang
+#     menghitung per-flow tidak pernah menumpuk. threshold:type threshold
+#     menghitung match per-source-IP lintas flow -> cocok untuk pola scan.
+# ---------------------------------------------------------------------------
+
+alert ip 192.168.56.40 any -> 192.168.56.10 any (msg:"CUSTOM SCAN dari Kali ke DC01"; threshold:type threshold, track by_src, count 20, seconds 10; classtype:attempted-recon; sid:1000001; rev:7;)

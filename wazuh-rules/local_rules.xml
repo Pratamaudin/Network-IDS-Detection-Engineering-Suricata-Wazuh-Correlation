@@ -1,0 +1,55 @@
+<!--
+  Custom Wazuh rules untuk layer network IDS (Suricata)
+  Lokasi di manager: /var/ossec/etc/rules/local_rules.xml
+
+  Tambahkan blok-blok di bawah ke local_rules.xml yang sudah ada.
+  (File ini HANYA berisi rule yang relevan ke modul Suricata; rule host
+   seperti Kerberoasting 100100 / AS-REP 100200 / spraying 100300 ada di
+   repo lab host-based yang terpisah.)
+
+  PELAJARAN KUNCI:
+  Di level rule Wazuh, field signature Suricata diakses sebagai
+  "alert.signature" TANPA prefix "data." — prefix "data." hanya muncul di
+  tampilan dashboard / alerts.json, bukan saat rule matching. Rule bawaan
+  86601 ("Suricata: Alert") juga menggunakan $(alert.signature), dan itu
+  dipakai sebagai parent lewat if_sid.
+-->
+
+<!-- ======================================================================
+     Rule 100400 - Angkat alert "CUSTOM SCAN" dari level 3 (bawaan 86601)
+     ke level 12, dengan tag MITRE T1046 (Network Service Discovery)
+     ====================================================================== -->
+<group name="suricata,ids,attack,">
+  <rule id="100400" level="12">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature">CUSTOM SCAN</field>
+    <description>Suricata: Port scan terdeteksi dari $(src_ip) ke $(dest_ip)</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+</group>
+
+<!-- ======================================================================
+     Rule 100500 - CORRELATION network<->host (STATUS: tuning in progress)
+     Tujuan: nyalakan satu alert "multi-stage attack" level 14 ketika
+     alert host (spraying 100300) muncul DAN alert network (scan 100400)
+     terjadi dalam jendela waktu yang sama.
+
+     CATATAN JUJUR: rule ini SUDAH lolos validasi (wazuh-analysisd -t) dan
+     ter-load, tetapi BELUM berhasil trigger end-to-end saat pengujian
+     (grep '"id":"100500"' = 0) meski komponen 100300 & 100400 jelas nyala.
+     Lihat docs/correlation-notes.md untuk analisis & rencana perbaikan.
+     ====================================================================== -->
+<group name="correlation,attack,">
+  <rule id="100500" level="14" frequency="2" timeframe="300">
+    <if_sid>100300</if_sid>
+    <if_matched_sid>100400</if_matched_sid>
+    <description>MULTI-STAGE ATTACK: recon network (scan) diikuti serangan host dari attacker yang sama</description>
+    <mitre>
+      <id>T1046</id>
+      <id>T1110.003</id>
+    </mitre>
+    <options>no_full_log</options>
+  </rule>
+</group>
